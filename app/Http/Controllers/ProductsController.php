@@ -42,7 +42,7 @@ class ProductsController extends Controller
     public function privateIndex(Request $request){
        
         $array = ['error' => ''];
-        $products = Product::select()->orderBy('id', 'desc')->paginate(12);
+         $products = Product::select()->orderBy('posicao', 'desc')->paginate(12);
 
         if($products){
             
@@ -390,7 +390,7 @@ class ProductsController extends Controller
         $q = $request->input('q');
         
         if($q){
-            $products = Product::where('título', 'LIKE', '%'.$q.'%')->get();
+            $products = Product::where('title', 'LIKE', '%'.$q.'%')->get();
             $array['itens']['data'] = $products;
 
             foreach($products as $key => $item){
@@ -430,5 +430,23 @@ class ProductsController extends Controller
 
         return $array;
 
+    }
+
+    public function order(Request $request){
+        $array = ['error' => ''];
+        $itens = $request->input('itens');
+        $data = json_decode($itens, TRUE);
+        
+        if($data){
+            foreach($data as $key => $item){
+                $cat = Product::find($item['id']);
+                $cat->posicao = $item['posicao'];
+                $cat->save();
+            }
+        }else{
+            $array['error'] = 'Produto não encontrado!';
+            return $array;
+        }
+        return $array;
     }
 }

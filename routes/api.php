@@ -124,3 +124,4 @@ Route::post('/create/categorie/product', [CategoriesProductsController::class, '
 Route::delete('/categorie/product/{id}', [CategoriesProductsController::class, 'delete']);
 Route::get('/categorie/product', [CategoriesProductsController::class, 'findAll']);
 Route::post('/categorie/product/{id}', [CategoriesProductsController::class, 'update']);
+Route::post('/order', [CategoriesProductsController::class, 'order']);

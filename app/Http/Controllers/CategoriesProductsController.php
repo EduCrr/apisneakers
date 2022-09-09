@@ -10,12 +10,12 @@ class CategoriesProductsController extends Controller
 {
    public function __construct()
     {
-        $this->middleware('auth:api', [ 'except' => [ 'index', 'privateIndex', 'create', 'findOneEdit', 'findAll' ] ] );  
+        $this->middleware('auth:api', [ 'except' => [ 'index', 'privateIndex', 'create', 'findOneEdit', 'findOnePrivate', 'findAll', 'order' ] ] );  
     }
    
     public function privateIndex(Request $request){
         $array = ['error' => ''];
-        $categories = CategorieProduct::all();
+        $categories = CategorieProduct::orderBy('posicao', 'desc')->get();
         $array['categories'] = $categories;
         $array['link'] = 'categorias-produtos';
 
@@ -53,7 +53,7 @@ class CategoriesProductsController extends Controller
 
     public function findOnePrivate($id){
         $array = ['error' => ''];
-        $category = CategorieProduct::find($id)->products()->paginate(1);
+        $category = CategorieProduct::find($id)->products()->paginate(12);
         if($category){
             foreach($category as $key => $item){
                 if($item['visivel'] === 1){
@@ -122,6 +122,10 @@ class CategoriesProductsController extends Controller
                 $newCat = new CategorieProduct();
                 $newCat->name = $name;
                 $newCat->save();
+
+                $newCat->posicao = $newCat->id;
+                $newCat->save();
+
                 $array['success'] = 'Categoria criada com sucesso!';
 
             }else{
@@ -187,6 +191,30 @@ class CategoriesProductsController extends Controller
                 $category->visivel = 1;
             }
             $category->save();
+        }else{
+            $array['error'] = 'Categoria não encontrada!';
+            return $array;
+        }
+
+        return $array;
+
+    }
+
+    public function order(Request $request){
+        $array = ['error' => ''];
+        $itens = $request->input('itens');
+
+        $data = json_decode($itens, TRUE);
+        
+        if($data){
+
+            foreach($data as $key => $item){
+                $cat = CategorieProduct::find($item['id']);
+                $cat->posicao = $item['posicao'];
+                $cat->save();
+            }
+           
+           
         }else{
             $array['error'] = 'Categoria não encontrada!';
             return $array;
