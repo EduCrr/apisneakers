@@ -163,7 +163,49 @@ class CreateAllTables extends Migration
             $table->string('imagem');
             $table->dateTime('criado')->nullable();
         });
-        
+
+        Schema::create('testes', function (Blueprint $table) {
+            $table->id();
+        });
+
+         Schema::create('idiomas', function (Blueprint $table) {
+            $table->id();
+            $table->string('nome');
+            $table->string('codigo');
+            $table->string('icone');
+            $table->unsignedBigInteger('padrao')->default(0);
+            $table->dateTime('criado')->nullable();
+
+        });
+
+        Schema::create('teste_idiomas', function (Blueprint $table) {
+            $table->id();
+            $table->string('titulo');
+            $table->string('descricao');
+           
+        });
+
+        Schema::table('teste_idiomas', function (Blueprint $table) {
+            $table->unsignedBigInteger('teste_id')->nullable();
+        });
+
+        Schema::table('teste_idiomas', function (Blueprint $table) {
+            $table->unsignedBigInteger('idioma_id')->nullable();
+        });
+
+        Schema::table('teste_idiomas', function (Blueprint $table) {
+            $table->foreign('teste_id')
+            ->references('id')
+            ->on('testes')
+            ->onDelete('set null');
+        });
+
+        Schema::table('teste_idiomas', function (Blueprint $table) {
+            $table->foreign('idioma_id')
+            ->references('id')
+            ->on('idiomas')
+            ->onDelete('set null');
+        });
     }
 
     /**
@@ -182,6 +224,9 @@ class CreateAllTables extends Migration
         Schema::dropIfExists('categories');
         Schema::dropIfExists('categories_products');
         Schema::dropIfExists('slides');
+        Schema::dropIfExists('testes');
+        Schema::dropIfExists('idiomas');
+        Schema::dropIfExists('teste_idiomas');
         Schema::table('posts', function (Blueprint $table) {
             $table->dropColumn('category_id');
         });
@@ -193,6 +238,12 @@ class CreateAllTables extends Migration
         });
         Schema::table('parameters_contents', function (Blueprint $table) {
             $table->dropColumn('content_id');
+        });
+        Schema::table('teste_idiomas', function (Blueprint $table) {
+            $table->dropColumn('teste_id');
+        });
+        Schema::table('teste_idiomas', function (Blueprint $table) {
+            $table->dropColumn('idioma_id');
         });
     }
 }

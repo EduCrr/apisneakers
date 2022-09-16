@@ -11,6 +11,7 @@ use App\Http\Controllers\ContentsController;
 use App\Http\Controllers\SliderController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\PaginasController;
+use App\Http\Controllers\TestesController;
 
 
 
@@ -135,3 +136,6 @@ Route::delete('/categorie/product/{id}', [CategoriesProductsController::class, '
 Route::get('/categorie/product', [CategoriesProductsController::class, 'findAll']);
 Route::post('/categorie/product/{id}', [CategoriesProductsController::class, 'update']);
 Route::post('/order/category/products', [CategoriesProductsController::class, 'order']);
+
+//teste
+Route::get('/teste', [TestesController::class, 'index']);
