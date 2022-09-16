@@ -18,7 +18,7 @@ class SliderController extends Controller
     public function index(Request $request){
        
         $array = ['error' => ''];
-        $slides = Slide::where('visivel', 1)->get();
+        $slides = Slide::where('visivel', 1)->orderBy('posicao', 'asc')->orderBy('created_at', 'desc')->get(); 
 
         if($slides){
             $array['slides'] = $slides;
@@ -34,10 +34,11 @@ class SliderController extends Controller
     public function privateIndex(Request $request){
        
         $array = ['error' => ''];
-        $slides = Slide::all();
+        $slides = Slide::orderBy('posicao', 'asc')->orderBy('created_at', 'desc')->get();
 
         if($slides){
             $array['slides'] = $slides;
+            $array['link'] = 'slides';
             $array['path'] = url('content/slides/');
         }else{
             $array['error'] = 'Nenhum imagem foi encontrada';
@@ -97,6 +98,8 @@ class SliderController extends Controller
                 $newSlide = new Slide();
                 $newSlide->title = $title;
                 $newSlide->imagem = $photoNameImagem;
+                $newSlide->created_at = date('Y-m-d H:i:s');
+                $newSlide->posicao = 0;
                 $newSlide->save();
 
         }else{
@@ -190,6 +193,24 @@ class SliderController extends Controller
             $array['error'] = 'Nenhuma imagem foi encontrada';
             return $array;
         }
+    }
+
+    public function order(Request $request){
+        $array = ['error' => ''];
+        $itens = $request->input('itens');
+        $data = json_decode($itens, TRUE);
+        
+        if($data){
+            foreach($data as $key => $item){
+                $cat = Slide::find($item['id']);
+                $cat->posicao = $item['posicao'];
+                $cat->save();
+            }
+        }else{
+            $array['error'] = 'Imagem não encontrado!';
+            return $array;
+        }
+        return $array;
     }
 
 }

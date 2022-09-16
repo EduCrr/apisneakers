@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use App\Models\Post;
+use App\Models\Category;
 use App\Models\Imagem;
 use Intervention\Image\Facades\Image;
 use Illuminate\Support\Facades\File;
@@ -15,7 +16,7 @@ class PostsController extends Controller
 {
     public function __construct()
     {
-        $this->middleware('auth:api', [ 'except' => [ 'index', 'privateIndex', 'findOne', 'findOnePrivate', 'search' ] ] );  
+        $this->middleware('auth:api', [ 'except' => [ 'index', 'privateIndex', 'findOne', 'findOnePrivate', 'search', 'privateOrderIndex' ] ] );  
     }
 
     public function index(Request $request){
@@ -24,7 +25,7 @@ class PostsController extends Controller
         date_default_timezone_set('America/Sao_Paulo');
         $date = date('Y-m-d H:i');
 
-        $posts = Post::where('visivel', 1)->where('publish', '<=', $date)->orderBy('created_at', 'desc')->paginate(12);
+        $posts = Post::where('visivel', 1)->where('publish', '<=', $date)->orderBy('posicao', 'asc')->orderBy('created_at', 'desc')->paginate(12);
 
         if($posts){
             
@@ -42,32 +43,92 @@ class PostsController extends Controller
         return $array; 
     }
 
-    public function privateIndex(Request $request){
+    // public function privateIndex(Request $request){
        
-        $array = ['error' => ''];
-        $posts = Post::select()->orderBy('created_at', 'desc')->paginate(12);
+    //     $array = ['error' => ''];
+    //     $posts = Post::select()->orderBy('posicao', 'asc')->orderBy('created_at', 'desc')->paginate(3);
 
-        if($posts){
+    //     if($posts){
             
-            foreach($posts as $key => $item){
-            // $posts[$key]['imagens'] = $item->imagens;
-                $posts[$key]['category'] = $item->category;
-                if($item['visivel'] === 1){
-                    $posts[$key]['visivel'] = true;
-                }else{
-                    $posts[$key]['visivel'] = false;
-                }
-            }
+    //         foreach($posts as $key => $item){
+    //         // $posts[$key]['imagens'] = $item->imagens;
+    //             $c[$key]['category'] = $item->category;
+    //             // if($item['visivel'] === 1){
+    //             //     $posts[$key]['visivel'] = true;
+    //             // }else{
+    //             //     $posts[$key]['visivel'] = false;
+    //             // }
+    //         }
+    //         $array['itens'] = $posts;
+    //         $array['link'] = 'posts';
+    //         $array['name'] = 'Posts';
+    //         $array['path'] = url('content/posts/banner/');
+    //     }else{
+    //         $array['error'] = 'Nenhum post foi encontrado';
+    //         return $array;
+    //     }
+        
+    //     return $array; 
+    // }
+
+    // public function privateOrderIndex(Request $request){
+       
+    //     $array = ['error' => ''];
+    //     $posts = Post::select(['id', 'title', 'posicao'])->orderBy('posicao', 'asc')->orderBy('created_at', 'desc')->get();
+
+    //     if($posts){
+    //         $array['order'] = $posts;
+    //         $array['link'] = 'posts';
+    //     }else{
+    //         $array['error'] = 'Nenhum post foi encontrado';
+    //         return $array;
+    //     }
+        
+    //     return $array; 
+    // }
+
+
+    public function privateIndex(Request $request){
+        $id = $request->input('cat');
+        $array = ['error' => ''];
+
+        if (!$id){
+            $newId = Category::select('id')->orderBy('posicao', 'asc')->first();
+            $id = $newId->id;
+        }
+       
+        $posts = Category::find($id)->posts()->orderBy('posicao', 'asc')->orderBy('created_at', 'desc')->paginate(3);
+        if($posts){
             $array['itens'] = $posts;
             $array['link'] = 'posts';
             $array['name'] = 'Posts';
-            $array['path'] = url('content/posts/banner/');
+            $array['path'] = url('content/posts/banner');
         }else{
-            $array['error'] = 'Nenhum post foi encontrado';
+            $array['error'] = 'Não foi encontrada!';
             return $array;
         }
+        return $array;
+    }
+
+    public function privateOrderIndex(Request $request, $id){
+                    
+        $array = ['error' => ''];
         
-        return $array; 
+        if ($id === '0'){
+            $newId = Category::select('id')->orderBy('posicao', 'asc')->first();
+            $id = $newId->id;
+        }
+
+        $posts = Category::find($id)->posts()->orderBy('posicao', 'asc')->orderBy('created_at', 'desc')->get();
+        if($posts){
+            $array['order'] = $posts;
+            $array['link'] = 'posts';
+        }else{
+            $array['error'] = 'Não foi encontrada!';
+            return $array;
+        }
+        return $array;
+           
     }
 
     public function findOne($id){
@@ -105,6 +166,10 @@ class PostsController extends Controller
 
         $validator = Validator::make($request->all(), [
             'título' => 'required',
+            'título_da_página' => 'required',
+            'título_compartilhamento' => 'required',
+            'descrição_da_página' => 'required',
+            'descrição_compartilhamento' => 'required',
             'imagem.*' => 'required|image|mimes:jpeg,png,jpg,svg',
             'descrição' => 'required',
             'categoria' => 'required',
@@ -114,6 +179,10 @@ class PostsController extends Controller
         if(!$validator->fails()){
 
             $title = $request->input('título');
+            $titlePg = $request->input('título_da_página');
+            $titleCom = $request->input('título_compartilhamento');
+            $desPg = $request->input('descrição_da_página');
+            $desCom = $request->input('descrição_compartilhamento');
             $banner = $request->file('imagem');
             $category = $request->input('categoria');
             $description = $request->input('descrição');
@@ -133,14 +202,16 @@ class PostsController extends Controller
 
             $newPost = new Post();
             $newPost->title = $title;
+            $newPost->titulo_pagina = $titlePg;
+            $newPost->titulo_compartilhamento = $titleCom;
+            $newPost->descricao_pagina = $desPg;
+            $newPost->descricao_compartilhamento = $desCom;
             $newPost->banner = $photoNameBanner;
             $newPost->description = $description;
             $newPost->category_id = $category;
             $newPost->created_at = date('Y-m-d H:i:s');
             $newPost->publish = $day;
-            $str = strtolower($title);
-            $newPost->slug = preg_replace('/\s+/', '-', $str);
-
+            $newPost->posicao = 0;
             $newPost->save();
 
         }else{
@@ -178,6 +249,10 @@ class PostsController extends Controller
             'descrição' => 'required',
             'categoria' => 'required',
             'dia' => 'required',
+            'título_da_página' => 'required',
+            'título_compartilhamento' => 'required',
+            'descrição_da_página' => 'required',
+            'descrição_compartilhamento' => 'required',
         ];
 
         $validator = Validator::make($request->all(), $rules);
@@ -191,6 +266,10 @@ class PostsController extends Controller
         $description = $request->input('descrição');
         $category = $request->input('categoria');
         $day = $request->input('dia');
+        $titlePg = $request->input('título_da_página');
+        $titleCom = $request->input('título_compartilhamento');
+        $desPg = $request->input('descrição_da_página');
+        $desCom = $request->input('descrição_compartilhamento');
         $post = Post::find($id);
 
         if($title){
@@ -213,6 +292,22 @@ class PostsController extends Controller
 
         if($day){
             $post->publish = $day;
+        }
+
+         if($titlePg){
+            $post->titulo_pagina = $titlePg;
+        }
+
+        if($titleCom){
+            $post->titulo_compartilhamento = $titleCom;
+        }
+
+        if($desPg){
+            $post->descricao_pagina = $desPg;
+        }
+
+        if($desCom){
+            $post->descricao_compartilhamento = $desCom;
         }
         
         $post->save();
@@ -278,16 +373,8 @@ class PostsController extends Controller
         $q = $request->input('q');
         
         if($q){
-            $posts = Post::where('título', 'LIKE', '%'.$q.'%')->get();
+            $posts = Post::where('title', 'LIKE', '%'.$q.'%')->get();
             $array['itens']['data'] = $posts;
-
-            foreach($posts as $key => $item){
-                if($item['visivel'] === 1){
-                    $posts[$key]['visivel'] = true;
-                }else{
-                    $posts[$key]['visivel'] = false;
-                }
-            }
 
         }else{
             $array['error'] = 'Digite algo para buscar!';
@@ -318,6 +405,24 @@ class PostsController extends Controller
 
         return $array;
 
+    }
+
+    public function order(Request $request){
+        $array = ['error' => ''];
+        $itens = $request->input('itens');
+        $data = json_decode($itens, TRUE);
+        
+        if($data){
+            foreach($data as $key => $item){
+                $cat = Post::find($item['id']);
+                $cat->posicao = $item['posicao'];
+                $cat->save();
+            }
+        }else{
+            $array['error'] = 'Post não encontrado!';
+            return $array;
+        }
+        return $array;
     }
 
 

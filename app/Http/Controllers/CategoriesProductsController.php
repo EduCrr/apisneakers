@@ -15,7 +15,7 @@ class CategoriesProductsController extends Controller
    
     public function privateIndex(Request $request){
         $array = ['error' => ''];
-        $categories = CategorieProduct::orderBy('posicao', 'desc')->get();
+        $categories = CategorieProduct::orderBy('posicao', 'asc')->orderBy('created_at', 'desc')->get();  
         $array['categories'] = $categories;
         $array['link'] = 'categorias-produtos';
 
@@ -53,15 +53,9 @@ class CategoriesProductsController extends Controller
 
     public function findOnePrivate($id){
         $array = ['error' => ''];
-        $category = CategorieProduct::find($id)->products()->paginate(12);
+        $category = CategorieProduct::find($id)->products()->orderBy('posicao', 'asc')->orderBy('created_at', 'desc')->paginate(3);
         if($category){
-            foreach($category as $key => $item){
-                if($item['visivel'] === 1){
-                    $category[$key]['visivel'] = true;
-                }else{
-                    $category[$key]['visivel'] = false;
-                }
-            }
+            
             $array['itens'] = $category;
             $array['path'] = url('content/products/banner');
         }else{
@@ -73,7 +67,7 @@ class CategoriesProductsController extends Controller
 
     public function findOne($id){
         $array = ['error' => ''];
-        $category = CategorieProduct::find($id)->where('visivel', 1)->products()->paginate(1);
+        $category = CategorieProduct::find($id)->where('visivel', 1)->products()->orderBy('posicao', 'asc')->orderBy('created_at', 'desc')->paginate(3);
         if($category){
             foreach($category as $key => $item){
                 if($item['visivel'] === 1){
@@ -121,9 +115,8 @@ class CategoriesProductsController extends Controller
                 
                 $newCat = new CategorieProduct();
                 $newCat->name = $name;
-                $newCat->save();
-
-                $newCat->posicao = $newCat->id;
+                $newCat->created_at = date('Y-m-d H:i:s');
+                $newCat->posicao = 0;
                 $newCat->save();
 
                 $array['success'] = 'Categoria criada com sucesso!';

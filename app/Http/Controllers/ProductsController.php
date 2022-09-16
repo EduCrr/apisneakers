@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Product;
+use App\Models\CategorieProduct;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use App\Models\Imagem;
@@ -13,15 +14,14 @@ class ProductsController extends Controller
 {
     public function __construct()
     {
-        $this->middleware('auth:api', [ 'except' => [ 'index', 'privateIndex', 'findOne', 'findOnePrivate', 'search' ] ] );
+        $this->middleware('auth:api', [ 'except' => [ 'index', 'privateIndex', 'findOne', 'findOnePrivate', 'search', 'privateOrderIndex' ] ] );
         
     }
 
     public function index(Request $request){
         
         $array = ['error' => ''];
-
-        $products = Product::where('visivel', 1)->orderBy('id', 'desc')->paginate(12);
+        $products = Product::where('visivel', 1)->orderBy('posicao', 'asc')->orderBy('created_at', 'desc')->paginate(12);
 
         if($products){
             
@@ -40,31 +40,46 @@ class ProductsController extends Controller
     }
 
     public function privateIndex(Request $request){
-       
+        $id = $request->input('cat');
         $array = ['error' => ''];
-         $products = Product::select()->orderBy('posicao', 'desc')->paginate(12);
 
+        if (!$id){
+            $newId = CategorieProduct::select('id')->orderBy('posicao', 'asc')->first();
+            $id = $newId->id;
+        }
+       
+        $products = CategorieProduct::find($id)->products()->orderBy('posicao', 'asc')->orderBy('created_at', 'desc')->paginate(3);
         if($products){
-            
-            foreach($products as $key => $item){
-                //$products[$key]['imagens'] = $item->imagens;
-                $products[$key]['category'] = $item->category;
-                if($item['visivel'] === 1){
-                    $products[$key]['visivel'] = true;
-                }else{
-                    $products[$key]['visivel'] = false;
-                }
-            }
             $array['itens'] = $products;
             $array['link'] = 'produtos';
             $array['name'] = 'Produtos';
             $array['path'] = url('content/products/capa');
         }else{
-            $array['error'] = 'Nenhum Produto foi encontrado';
+            $array['error'] = 'Não foi encontrada!';
             return $array;
         }
+        return $array;
+    }
+
+    public function privateOrderIndex(Request $request, $id){
+                    
+        $array = ['error' => ''];
         
-        return $array; 
+        if ($id === '0'){
+            $newId = CategorieProduct::select('id')->orderBy('posicao', 'asc')->first();
+            $id = $newId->id;
+        }
+
+        $products = CategorieProduct::find($id)->products()->orderBy('posicao', 'asc')->orderBy('created_at', 'desc')->get();
+        if($products){
+            $array['order'] = $products;
+            $array['link'] = 'produtos';
+        }else{
+            $array['error'] = 'Não foi encontrada!';
+            return $array;
+        }
+        return $array;
+           
     }
 
     public function findOne($id){
@@ -108,6 +123,10 @@ class ProductsController extends Controller
 
         $validator = Validator::make($request->all(), [
             'título' => 'required',
+            'título_da_página' => 'required',
+            'título_compartilhamento' => 'required',
+            'descrição_da_página' => 'required',
+            'descrição_compartilhamento' => 'required',
             'banner.*' => 'required|image|mimes:jpeg,png,jpg,svg',
             'categoria' => 'required',
             'descrição' => 'required',
@@ -117,6 +136,10 @@ class ProductsController extends Controller
         if(!$validator->fails()){
 
             $title = $request->input('título');
+            $titlePg = $request->input('título_da_página');
+            $titleCom = $request->input('título_compartilhamento');
+            $desPg = $request->input('descrição_da_página');
+            $desCom = $request->input('descrição_compartilhamento');
             $banner = $request->file('banner');
             $capa = $request->file('capa');
             $category = $request->input('categoria');
@@ -152,11 +175,17 @@ class ProductsController extends Controller
 
                 $newProduct = new Product();
                 $newProduct->title = $title;
+                $newProduct->titulo_pagina = $titlePg;
+                $newProduct->titulo_compartilhamento = $titleCom;
+                $newProduct->descricao_pagina = $desPg;
+                $newProduct->descricao_compartilhamento = $desCom;
                 $newProduct->banner = $photoNameBanner;
                 $newProduct->capa = $photoNameCapa;
                 $newProduct->description = $description;
                 $newProduct->categorie_product_id = $category;
-           
+                $newProduct->created_at = date('Y-m-d H:i:s');
+                $newProduct->posicao = 0;
+          
                 $newProduct->save();
 
                 if($images){
@@ -272,6 +301,10 @@ class ProductsController extends Controller
             'título' => 'required',
             'descrição' => 'required',
             'categoria' => 'required',
+            'título_da_página' => 'required',
+            'título_compartilhamento' => 'required',
+            'descrição_da_página' => 'required',
+            'descrição_compartilhamento' => 'required',
         ];
 
         $validator = Validator::make($request->all(), $rules);
@@ -284,10 +317,31 @@ class ProductsController extends Controller
         $title = $request->input('título');
         $description = $request->input('descrição');
         $category = $request->input('categoria');
+        $titlePg = $request->input('título_da_página');
+        $titleCom = $request->input('título_compartilhamento');
+        $desPg = $request->input('descrição_da_página');
+        $desCom = $request->input('descrição_compartilhamento');
+
         $product = Product::find($id);
 
         if($title){
             $product->title = $title;
+        }
+
+        if($titlePg){
+            $product->titulo_pagina = $titlePg;
+        }
+
+        if($titleCom){
+            $product->titulo_compartilhamento = $titleCom;
+        }
+
+        if($desPg){
+            $product->descricao_pagina = $desPg;
+        }
+
+        if($desCom){
+            $product->descricao_compartilhamento = $desCom;
         }
 
        if($description){
@@ -393,13 +447,6 @@ class ProductsController extends Controller
             $products = Product::where('title', 'LIKE', '%'.$q.'%')->get();
             $array['itens']['data'] = $products;
 
-            foreach($products as $key => $item){
-                if($item['visivel'] === 1){
-                    $products[$key]['visivel'] = true;
-                }else{
-                    $products[$key]['visivel'] = false;
-                }
-            }
 
         }else{
             $array['error'] = 'Digite algo para buscar!';

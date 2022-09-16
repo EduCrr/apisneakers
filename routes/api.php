@@ -52,12 +52,15 @@ Route::post('/categorie', [CategoriesController::class, 'create']);
 Route::delete('/categorie/{id}', [CategoriesController::class, 'delete']);
 Route::get('/categorie', [CategoriesController::class, 'findAll']);
 Route::post('/categorie/{id}', [CategoriesController::class, 'update']);
+Route::post('/order/category', [CategoriesController::class, 'order']);
+
 
 //posts
 
 Route::get('search/posts', [PostsController::class, 'search']); 
-Route::get('/private/posts', [PostsController::class, 'privateIndex']);
+Route::post('/private/posts', [PostsController::class, 'privateIndex']);
 Route::get('/posts', [PostsController::class, 'index']);
+Route::get('/posts/order/{id}', [PostsController::class, 'privateOrderIndex']);
 Route::get('/post/{id}', [PostsController::class, 'findOne']);
 Route::get('/post/private/{id}', [PostsController::class, 'findOnePrivate']);
 Route::delete('/post/{id}', [PostsController::class, 'delete']);
@@ -66,6 +69,9 @@ Route::post('/post/edit/{id}', [PostsController::class, 'update']);
 Route::post('/post/banner/{id}', [PostsController::class, 'banner']); 
 Route::post('/postimage', [PostsController::class, 'postImage']);
 Route::post('/post/visivel/{id}', [PostsController::class, 'showPost']); 
+Route::post('/order/posts', [PostsController::class, 'order']);
+
+
 
 //content
 
@@ -92,13 +98,16 @@ Route::post('/slide', [SliderController::class, 'create']);
 Route::post('/slide/edit/{id}', [SliderController::class, 'update']); 
 Route::post('/slide/imagem/{id}', [SliderController::class, 'updateImagem']); 
 Route::delete('/slide/{id}', [SliderController::class, 'delete']);
+Route::post('/order/slide', [SliderController::class, 'order']);
+
 
 
 //product
 
 Route::get('search/products', [ProductsController::class, 'search']); 
-Route::get('/private/products', [ProductsController::class, 'privateIndex']);
+Route::post('/private/products/', [ProductsController::class, 'privateIndex']); //produto chamado pela sua categoria 
 Route::get('/products', [ProductsController::class, 'index']);
+Route::get('/products/order/{id}', [ProductsController::class, 'privateOrderIndex']);
 Route::get('/product/{id}', [ProductsController::class, 'findOne']);
 Route::get('/product/private/{id}', [ProductsController::class, 'findOnePrivate']);
 Route::delete('/product/{id}', [ProductsController::class, 'delete']);
@@ -111,6 +120,7 @@ Route::delete('product/imagem/{id}', [ProductsController::class, 'deleteImage'])
 Route::post('/product/visivel/{id}', [ProductsController::class, 'showProduct']);
 Route::post('product/images/{id}', [ProductsController::class, 'updateImages']); 
 Route::delete('product/imagem/{id}', [ProductsController::class, 'deleteImage']); 
+Route::post('/order/products', [ProductsController::class, 'order']);
 
 
 //categorie products
@@ -124,4 +134,4 @@ Route::post('/create/categorie/product', [CategoriesProductsController::class, '
 Route::delete('/categorie/product/{id}', [CategoriesProductsController::class, 'delete']);
 Route::get('/categorie/product', [CategoriesProductsController::class, 'findAll']);
 Route::post('/categorie/product/{id}', [CategoriesProductsController::class, 'update']);
-Route::post('/order', [CategoriesProductsController::class, 'order']);
+Route::post('/order/category/products', [CategoriesProductsController::class, 'order']);

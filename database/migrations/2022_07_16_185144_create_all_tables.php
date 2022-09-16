@@ -31,8 +31,11 @@ class CreateAllTables extends Migration
             $table->dateTime('created_at');
             $table->dateTime('publish');
             $table->string('titulo_pagina');
+            $table->string('descricao_pagina');
             $table->string('titulo_compartilhamento');
             $table->string('descricao_compartilhamento');
+            $table->tinyInteger('posicao')->nullable();
+
         });
 
          Schema::create('products', function (Blueprint $table) {
@@ -44,8 +47,11 @@ class CreateAllTables extends Migration
             $table->tinyInteger('visivel')->default(0);
             $table->string('slug')->unique();
             $table->string('titulo_pagina');
+            $table->string('descricao_pagina');
             $table->string('titulo_compartilhamento');
             $table->string('descricao_compartilhamento');
+            $table->tinyInteger('posicao')->nullable();
+            $table->dateTime('created_at');
 
         });
 
@@ -59,6 +65,8 @@ class CreateAllTables extends Migration
             $table->id();
             $table->string('name');
             $table->tinyInteger('visivel')->default(0);
+            $table->tinyInteger('posicao')->nullable();
+            $table->dateTime('created_at');
 
         });
 
@@ -66,6 +74,8 @@ class CreateAllTables extends Migration
             $table->id();
             $table->string('name');
             $table->tinyInteger('visivel')->default(0);
+            $table->tinyInteger('posicao')->nullable();
+            $table->dateTime('created_at');
 
         });
 
@@ -139,6 +149,8 @@ class CreateAllTables extends Migration
             $table->string('imagem');
             $table->string('imagem_responsive')->nullable();
             $table->tinyInteger('visivel')->default(0);
+            $table->tinyInteger('posicao')->nullable();
+            $table->dateTime('created_at');
         });
 
         Schema::create('paginas', function (Blueprint $table) {

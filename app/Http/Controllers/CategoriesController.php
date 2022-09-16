@@ -11,12 +11,12 @@ class CategoriesController extends Controller
 
     public function __construct()
     {
-        $this->middleware('auth:api', [ 'except' => [ 'index', 'privateIndex', 'findOneEdit', 'findAll' ] ] );  
+        $this->middleware('auth:api', [ 'except' => [ 'index', 'privateIndex', 'create', 'findOneEdit', 'findOnePrivate', 'findAll', 'order' ] ] );  
     }
 
     public function privateIndex(Request $request){
         $array = ['error' => ''];
-        $categories = Category::all();
+        $categories = Category::orderBy('posicao', 'asc')->orderBy('created_at', 'desc')->get(); 
         $array['categories'] = $categories;
         $array['link'] = 'categorias';
         
@@ -26,7 +26,7 @@ class CategoriesController extends Controller
     public function index(Request $request){
        
         $array = ['error' => ''];
-        $categories = Category::where('visivel', 1)->get();
+        $categories = Category::where('visivel', 1)->orderBy('posicao', 'asc')->orderBy('created_at', 'desc')->get();
 
         if($categories){
             $array['categories'] = $categories;
@@ -53,15 +53,8 @@ class CategoriesController extends Controller
 
     public function findOnePrivate($id){
         $array = ['error' => ''];
-        $category = Category::find($id)->posts()->paginate(1);
+        $category = Category::find($id)->posts()->orderBy('posicao', 'asc')->orderBy('created_at', 'desc')->paginate(3);
         if($category){
-            foreach($category as $key => $item){
-                if($item['visivel'] === 1){
-                    $category[$key]['visivel'] = true;
-                }else{
-                    $category[$key]['visivel'] = false;
-                }
-            }
             $array['itens'] = $category;
             $array['path'] = url('content/banner/');
         }else{
@@ -73,15 +66,9 @@ class CategoriesController extends Controller
 
     public function findOne($id){
         $array = ['error' => ''];
-        $category = Category::find($id)->where('visivel', 1)->posts()->paginate(1);
+        $category = Category::find($id)->where('visivel', 1)->posts()->orderBy('posicao', 'asc')->orderBy('created_at', 'desc')->paginate(3);
         if($category){
-            foreach($category as $key => $item){
-                if($item['visivel'] === 1){
-                    $category[$key]['visivel'] = true;
-                }else{
-                    $category[$key]['visivel'] = false;
-                }
-            }
+            
             $array['itens'] = $category;
             $array['path'] = url('content/banner/');
         }else{
@@ -120,6 +107,8 @@ class CategoriesController extends Controller
                 
                 $newCat = new Category();
                 $newCat->name = $name;
+                $newCat->created_at = date('Y-m-d H:i:s');
+                $newCat->posicao = 0;
                 $newCat->save();
                 $array['success'] = 'Categoria criada com sucesso!';
 
@@ -193,5 +182,23 @@ class CategoriesController extends Controller
 
         return $array;
 
+    }
+
+    public function order(Request $request){
+        $array = ['error' => ''];
+        $itens = $request->input('itens');
+        $data = json_decode($itens, TRUE);
+        
+        if($data){
+            foreach($data as $key => $item){
+                $cat = Category::find($item['id']);
+                $cat->posicao = $item['posicao'];
+                $cat->save();
+            }
+        }else{
+            $array['error'] = 'Categoria não encontrado!';
+            return $array;
+        }
+        return $array;
     }
 }
