@@ -233,6 +233,8 @@ return [
         'View' => Illuminate\Support\Facades\View::class,
         'Image' => Intervention\Image\Facades\Image::class,
         'Str' => Illuminate\Support\Str::class,
+        'PDF' => niklasravnsborg\LaravelPdf\Facades\Pdf::class,
+
 
 
 

@@ -11,7 +11,8 @@ use App\Http\Controllers\ContentsController;
 use App\Http\Controllers\SliderController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\PaginasController;
-use App\Http\Controllers\TestesController;
+use App\Http\Controllers\IdiomasController;
+use App\Http\Controllers\EmailsController;
 
 
 
@@ -45,59 +46,61 @@ Route::post('/user/avatar', [UserController::class, 'updateAvatar']);
 //categorie post
 
 Route::post('/categorie/visivel/{id}', [CategoriesController::class, 'showCategory']); 
-Route::get('/categories/private', [CategoriesController::class, 'privateIndex']);
-Route::get('/categories', [CategoriesController::class, 'index']);
-Route::get('/categorie/{id}', [CategoriesController::class, 'findOnePrivate']);
-Route::get('/categorie/edit/{id}', [CategoriesController::class, 'findOneEdit']);
+Route::get('/categorie/{lng}', [CategoriesController::class, 'findAll']);
+Route::get('/categories/private/{lng}', [CategoriesController::class, 'privateIndex']);
+Route::get('/categories/{lng}', [CategoriesController::class, 'index']);
+Route::get('/categorie/{id}/{lng}', [CategoriesController::class, 'findOnePrivate']);
+Route::get('/categorie/edit/{id}/{lng}', [CategoriesController::class, 'findOneEdit']);
 Route::post('/categorie', [CategoriesController::class, 'create']);
+Route::get('/categorie/index/{id}/{lng}', [CategoriesController::class, 'findOne']);
 Route::delete('/categorie/{id}', [CategoriesController::class, 'delete']);
-Route::get('/categorie', [CategoriesController::class, 'findAll']);
-Route::post('/categorie/{id}', [CategoriesController::class, 'update']);
+Route::post('/categorie/{id}/{lng}', [CategoriesController::class, 'update']);
 Route::post('/order/category', [CategoriesController::class, 'order']);
 
 
 //posts
 
-Route::get('search/posts', [PostsController::class, 'search']); 
-Route::post('/private/posts', [PostsController::class, 'privateIndex']);
-Route::get('/posts', [PostsController::class, 'index']);
-Route::get('/posts/order/{id}', [PostsController::class, 'privateOrderIndex']);
-Route::get('/post/{id}', [PostsController::class, 'findOne']);
-Route::get('/post/private/{id}', [PostsController::class, 'findOnePrivate']);
+Route::get('search/posts/{lng}', [PostsController::class, 'search']); 
+Route::post('/private/posts/{lng}', [PostsController::class, 'privateIndex']);
+Route::post('/posts/{lng}', [PostsController::class, 'index']);
+Route::get('/posts/order/{id}/{lng}', [PostsController::class, 'privateOrderIndex']);
+Route::get('/post/{id}/{lng}', [PostsController::class, 'findOne']);
+Route::get('/post/private/{id}/{lng}', [PostsController::class, 'findOnePrivate']);
 Route::delete('/post/{id}', [PostsController::class, 'delete']);
 Route::post('/post', [PostsController::class, 'create']);
-Route::post('/post/edit/{id}', [PostsController::class, 'update']); 
+Route::post('/post/edit/{id}/{lng}', [PostsController::class, 'update']); 
 Route::post('/post/banner/{id}', [PostsController::class, 'banner']); 
 Route::post('/postimage', [PostsController::class, 'postImage']);
 Route::post('/post/visivel/{id}', [PostsController::class, 'showPost']); 
 Route::post('/order/posts', [PostsController::class, 'order']);
 
 
-
 //content
 
-Route::get('/content/{controladora}', [ContentsController::class, 'home']);
-Route::post('/content/home/{id}', [ContentsController::class, 'update']); 
+Route::get('/content/{controladora}/{lng}', [ContentsController::class, 'home']);
+Route::get('/content/single/{id}/{lng}', [ContentsController::class, 'contentId']);
+Route::post('/content/home/{id}/{lng}', [ContentsController::class, 'update']); 
 Route::post('/content/imagem/{id}', [ContentsController::class, 'imagem']); 
 Route::post('/content/imagem/responsive/{id}', [ContentsController::class, 'imagemResponsive']); 
 
 
 //paginas
 
-Route::get('/pagina/{controladora}', [PaginasController::class, 'home']);
-Route::post('/pagina/{id}', [PaginasController::class, 'update']); 
+Route::get('/pagina/{controladora}/{lng}', [PaginasController::class, 'home']);
 Route::post('/pagina/imagem/{id}', [PaginasController::class, 'imagem']); 
+Route::post('/pagina/{id}/{lng}', [PaginasController::class, 'update']); 
 
 
 //slide
 
-Route::get('/private/slides', [SliderController::class, 'privateIndex']);
-Route::get('/slides', [SliderController::class, 'index']);
-Route::get('/slide/private/{id}', [SliderController::class, 'findOnePrivate']);
+Route::get('/private/slides/{lng}', [SliderController::class, 'privateIndex']);
+Route::get('/slides/{lng}', [SliderController::class, 'index']);
+Route::get('/slide/private/{id}/{lng}', [SliderController::class, 'findOnePrivate']);
 Route::post('/slide/visivel/{id}', [SliderController::class, 'showSlide']); 
 Route::post('/slide', [SliderController::class, 'create']);
-Route::post('/slide/edit/{id}', [SliderController::class, 'update']); 
+Route::post('/slide/edit/{id}/{lng}', [SliderController::class, 'update']); 
 Route::post('/slide/imagem/{id}', [SliderController::class, 'updateImagem']); 
+Route::post('/slide/mobile/{id}', [SliderController::class, 'updateMobile']); 
 Route::delete('/slide/{id}', [SliderController::class, 'delete']);
 Route::post('/order/slide', [SliderController::class, 'order']);
 
@@ -105,15 +108,15 @@ Route::post('/order/slide', [SliderController::class, 'order']);
 
 //product
 
-Route::get('search/products', [ProductsController::class, 'search']); 
-Route::post('/private/products/', [ProductsController::class, 'privateIndex']); //produto chamado pela sua categoria 
-Route::get('/products', [ProductsController::class, 'index']);
-Route::get('/products/order/{id}', [ProductsController::class, 'privateOrderIndex']);
-Route::get('/product/{id}', [ProductsController::class, 'findOne']);
-Route::get('/product/private/{id}', [ProductsController::class, 'findOnePrivate']);
+Route::get('search/products/{lng}', [ProductsController::class, 'search']); 
+Route::post('/private/products/{lng}', [ProductsController::class, 'privateIndex']); //produto chamado pela sua categoria 
+Route::get('/products/{lng}', [ProductsController::class, 'index']);
+Route::get('/products/order/{id}/{lng}', [ProductsController::class, 'privateOrderIndex']);
+Route::get('/product/{id}/{lng}', [ProductsController::class, 'findOne']);
+Route::get('/product/private/{id}/{lng}', [ProductsController::class, 'findOnePrivate']);
 Route::delete('/product/{id}', [ProductsController::class, 'delete']);
 Route::post('/product', [ProductsController::class, 'create']);
-Route::post('/product/edit/{id}', [ProductsController::class, 'update']); 
+Route::post('/product/edit/{id}/{lng}', [ProductsController::class, 'update']); 
 Route::post('/product/banner/{id}', [ProductsController::class, 'banner']); 
 Route::post('/product/capa/{id}', [ProductsController::class, 'capa']); 
 Route::post('product/images/{id}', [ProductsController::class, 'updateImages']); 
@@ -127,15 +130,22 @@ Route::post('/order/products', [ProductsController::class, 'order']);
 //categorie products
 
 Route::post('/categorie/product/visivel/{id}', [CategoriesProductsController::class, 'showCategory']); 
-Route::get('/categories/product/private', [CategoriesProductsController::class, 'privateIndex']);
-Route::get('/categories/product', [CategoriesProductsController::class, 'index']);
-Route::get('/categorie/product/{id}', [CategoriesProductsController::class, 'findOnePrivate']);
-Route::get('/categorie/product/edit/{id}', [CategoriesProductsController::class, 'findOneEdit']);
-Route::post('/create/categorie/product', [CategoriesProductsController::class, 'create']);
+Route::get('/product/categorie/{lng}', [CategoriesProductsController::class, 'findAll']);
+Route::get('/categorie/product/{id}/{lng}', [CategoriesProductsController::class, 'findOnePrivate']);
+Route::get('/categorie/product/edit/{id}/{lng}', [CategoriesProductsController::class, 'findOneEdit']);
+Route::post('/categorie/product/{id}/{lng}', [CategoriesProductsController::class, 'update']);
+Route::get('/categorie/product/index/{id}/{lng}', [CategoriesProductsController::class, 'findOne']);
+Route::get('/categories/product/private/{lng}', [CategoriesProductsController::class, 'privateIndex']);
+Route::get('/categories/product/{lng}', [CategoriesProductsController::class, 'index']);
+Route::post('/create/categorie/product/', [CategoriesProductsController::class, 'create']);
 Route::delete('/categorie/product/{id}', [CategoriesProductsController::class, 'delete']);
-Route::get('/categorie/product', [CategoriesProductsController::class, 'findAll']);
-Route::post('/categorie/product/{id}', [CategoriesProductsController::class, 'update']);
 Route::post('/order/category/products', [CategoriesProductsController::class, 'order']);
 
 //teste
-Route::get('/teste', [TestesController::class, 'index']);
+Route::get('/teste/{lng}', [TestesController::class, 'index']);
+
+//Idiomas
+Route::get('/idiomas', [IdiomasController::class, 'index']);
+
+// Email
+Route::post('/email', [EmailsController::class, 'email']);

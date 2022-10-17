@@ -5,8 +5,9 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use App\Models\Post;
-use App\Models\Category;
-use App\Models\Imagem;
+use App\Models\PostIdioma;
+use App\Models\CategoriaPost;
+use App\Models\Idioma;
 use Intervention\Image\Facades\Image;
 use Illuminate\Support\Facades\File;
 use Carbon\Carbon;
@@ -19,87 +20,24 @@ class PostsController extends Controller
         $this->middleware('auth:api', [ 'except' => [ 'index', 'privateIndex', 'findOne', 'findOnePrivate', 'search', 'privateOrderIndex' ] ] );  
     }
 
-    public function index(Request $request){
-        
-        $array = ['error' => ''];
-        date_default_timezone_set('America/Sao_Paulo');
+    public function index(Request $request, $lng){
+         date_default_timezone_set('America/Sao_Paulo');
         $date = date('Y-m-d H:i');
-
-        $posts = Post::where('visivel', 1)->where('publish', '<=', $date)->orderBy('posicao', 'asc')->orderBy('created_at', 'desc')->paginate(12);
-
-        if($posts){
-            
-            foreach($posts as $key => $item){
-            // $posts[$key]['imagens'] = $item->imagens;
-                $posts[$key]['category'] = $item->category;
-            }
-            $array['posts'] = $posts;
-            $array['path'] = url('content/posts/banner/');
-        }else{
-            $array['error'] = 'Nenhum post foi encontrado';
-            return $array;
-        }
-        
-        return $array; 
-    }
-
-    // public function privateIndex(Request $request){
-       
-    //     $array = ['error' => ''];
-    //     $posts = Post::select()->orderBy('posicao', 'asc')->orderBy('created_at', 'desc')->paginate(3);
-
-    //     if($posts){
-            
-    //         foreach($posts as $key => $item){
-    //         // $posts[$key]['imagens'] = $item->imagens;
-    //             $c[$key]['category'] = $item->category;
-    //             // if($item['visivel'] === 1){
-    //             //     $posts[$key]['visivel'] = true;
-    //             // }else{
-    //             //     $posts[$key]['visivel'] = false;
-    //             // }
-    //         }
-    //         $array['itens'] = $posts;
-    //         $array['link'] = 'posts';
-    //         $array['name'] = 'Posts';
-    //         $array['path'] = url('content/posts/banner/');
-    //     }else{
-    //         $array['error'] = 'Nenhum post foi encontrado';
-    //         return $array;
-    //     }
-        
-    //     return $array; 
-    // }
-
-    // public function privateOrderIndex(Request $request){
-       
-    //     $array = ['error' => ''];
-    //     $posts = Post::select(['id', 'title', 'posicao'])->orderBy('posicao', 'asc')->orderBy('created_at', 'desc')->get();
-
-    //     if($posts){
-    //         $array['order'] = $posts;
-    //         $array['link'] = 'posts';
-    //     }else{
-    //         $array['error'] = 'Nenhum post foi encontrado';
-    //         return $array;
-    //     }
-        
-    //     return $array; 
-    // }
-
-
-    public function privateIndex(Request $request){
         $id = $request->input('cat');
+        $lngId = Idioma::select('id')->where('codigo', $lng)->first();
         $array = ['error' => ''];
 
         if (!$id){
-            $newId = Category::select('id')->orderBy('posicao', 'asc')->first();
+            $newId = CategoriaPost::select('id')->orderBy('posicao', 'asc')->first();
             $id = $newId->id;
         }
-       
-        $posts = Category::find($id)->posts()->orderBy('posicao', 'asc')->orderBy('created_at', 'desc')->paginate(3);
+
+        $posts = CategoriaPost::find($id)->posts()->where('visivel', 1)->where('publicado', '<=', $date)->orderBy('posicao', 'asc')->orderBy('criado', 'desc')->paginate(3);
         if($posts){
             $array['itens'] = $posts;
+             foreach($posts as $key => $item){
+                $posts[$key]['lng'] = $item->idiomas()->where('idioma_id', $lngId->id)->first();
+            }
             $array['link'] = 'posts';
             $array['name'] = 'Posts';
             $array['path'] = url('content/posts/banner');
@@ -110,18 +48,50 @@ class PostsController extends Controller
         return $array;
     }
 
-    public function privateOrderIndex(Request $request, $id){
-                    
+   
+    //aqui pode ser o mesmo que categoriescontroller
+    public function privateIndex(Request $request, $lng){
+        $id = $request->input('cat');
+        $lngId = Idioma::select('id')->where('codigo', $lng)->first();
         $array = ['error' => ''];
-        
-        if ($id === '0'){
-            $newId = Category::select('id')->orderBy('posicao', 'asc')->first();
+
+        if (!$id){
+            $newId = CategoriaPost::select('id')->orderBy('posicao', 'asc')->first();
             $id = $newId->id;
         }
 
-        $posts = Category::find($id)->posts()->orderBy('posicao', 'asc')->orderBy('created_at', 'desc')->get();
+        $posts = CategoriaPost::find($id)->posts()->orderBy('posicao', 'asc')->orderBy('criado', 'desc')->paginate(3);
+        if($posts){
+            $array['itens'] = $posts;
+             foreach($posts as $key => $item){
+                $posts[$key]['lng'] = $item->idiomas()->where('idioma_id', $lngId->id)->first();
+            }
+            $array['link'] = 'posts';
+            $array['name'] = 'Posts';
+            $array['path'] = url('content/posts/banner');
+        }else{
+            $array['error'] = 'Não foi encontrada!';
+            return $array;
+        }
+        return $array;
+    }
+
+    public function privateOrderIndex(Request $request, $id, $lng){
+                    
+        $array = ['error' => ''];
+        $lngId = Idioma::select('id')->where('codigo', $lng)->first();
+
+        if ($id === '0'){
+            $newId = CategoriaPost::select('id')->orderBy('posicao', 'asc')->first();
+            $id = $newId->id;
+        }
+
+        $posts = CategoriaPost::find($id)->posts()->orderBy('posicao', 'asc')->orderBy('criado', 'desc')->get();
         if($posts){
             $array['order'] = $posts;
+            foreach($posts as $key => $item){
+                $posts[$key]['lng'] = $item->idiomas()->where('idioma_id', $lngId->id)->first();
+            }
             $array['link'] = 'posts';
         }else{
             $array['error'] = 'Não foi encontrada!';
@@ -131,14 +101,17 @@ class PostsController extends Controller
            
     }
 
-    public function findOne($id){
+    public function findOne($id, $lng){
         $array = ['error' => ''];
-
+        $lngId = Idioma::select('id')->where('codigo', $lng)->first();
         $post = Post::where('visivel', 1)->find($id);
+
         if($post){
-            $post['category'] = $post->category;
-            $array['pathBanner'] = url('content/posts/banner/');
             $array['post'] = $post;
+            $array['post']['lng'] = $post->idiomas()->where('idioma_id', $lngId->id)->first();
+            $post['category'] = $post->category;
+            $post['category']['lng'] = $post->category->idiomas()->where('idioma_id', $lngId->id)->first();
+            $array['pathBanner'] = url('content/posts/banner/');
             return $array;
         }else{
             $array['error'] = 'Nenhum post foi encontrado';
@@ -146,14 +119,17 @@ class PostsController extends Controller
         }
     }
 
-    public function findOnePrivate($id){
+    public function findOnePrivate($id, $lng){
         $array = ['error' => ''];
-
+        $lngId = Idioma::select('id')->where('codigo', $lng)->first();
         $post = Post::find($id);
+
         if($post){
-            $post['category'] = $post->category;
-            $array['pathBanner'] = url('content/posts/banner/');
             $array['post'] = $post;
+            $array['post']['lng'] = $post->idiomas()->where('idioma_id', $lngId->id)->first();
+            $post['category'] = $post->category;
+            $post['category']['lng'] = $post->category->idiomas()->where('idioma_id', $lngId->id)->first();
+            $array['pathBanner'] = url('content/posts/banner/');
             return $array;
         }else{
             $array['error'] = 'Nenhum post foi encontrado';
@@ -165,9 +141,9 @@ class PostsController extends Controller
         $array = ['error' => ''];
 
         $validator = Validator::make($request->all(), [
-            'título' => 'required',
-            'título_da_página' => 'required',
-            'título_compartilhamento' => 'required',
+            'título' => 'required|max:255',
+            'título_da_página' => 'required|max:60',
+            'título_compartilhamento' => 'required|max:60',
             'descrição_da_página' => 'required',
             'descrição_compartilhamento' => 'required',
             'imagem.*' => 'required|image|mimes:jpeg,png,jpg,svg',
@@ -187,12 +163,13 @@ class PostsController extends Controller
             $category = $request->input('categoria');
             $description = $request->input('descrição');
             $day = $request->input('dia');
-           
+            $extension = $request->file('imagem')->extension();
+
             $photoNameBanner = '';
             //banner
             if($banner){
                 $destBanner = public_path('content/posts/banner');
-                $photoNameBanner = md5(time().rand(0,9999)).'.jpg';
+                $photoNameBanner = md5(time().rand(0,9999)).'.'.$extension;
                 $imgBanner = Image::make($banner->getRealPath());
                 $imgBanner->fit(550, 550)->save($destBanner.'/'.$photoNameBanner);
             }else{
@@ -201,18 +178,29 @@ class PostsController extends Controller
             }
 
             $newPost = new Post();
-            $newPost->title = $title;
-            $newPost->titulo_pagina = $titlePg;
-            $newPost->titulo_compartilhamento = $titleCom;
-            $newPost->descricao_pagina = $desPg;
-            $newPost->descricao_compartilhamento = $desCom;
+            $newPostIdioma = new PostIdioma();
+            
+            $newPostIdioma->titulo = $title;
+            $newPostIdioma->descricao = $description;
+            $newPostIdioma->titulo_pagina = $titlePg;
+            $newPostIdioma->titulo_compartilhamento = $titleCom;
+            $newPostIdioma->descricao_pagina = $desPg;
+            $newPostIdioma->descricao_compartilhamento = $desCom;
+            $newPostIdioma->idioma_id = 1;
+            $newPostIdioma->criado = date('Y-m-d H:i:s');
+            $newPostIdioma->save();
+
             $newPost->banner = $photoNameBanner;
-            $newPost->description = $description;
-            $newPost->category_id = $category;
-            $newPost->created_at = date('Y-m-d H:i:s');
-            $newPost->publish = $day;
+            $newPost->id_categoria = $category;
+            $newPost->criado = date('Y-m-d H:i:s');
+            $newPost->publicado = $day;
             $newPost->posicao = 0;
             $newPost->save();
+
+            $newPostIdioma->post_id = $newPost->id;
+            $newPostIdioma->save();
+
+            
 
         }else{
             $array['error'] = $validator->errors()->first();
@@ -227,6 +215,7 @@ class PostsController extends Controller
         $array = ['error' => ''];
 
         $post = Post::find($id);
+        $postIdioma = PostIdioma::where('post_id', $id)->get();
 
         if($id){
 
@@ -236,21 +225,25 @@ class PostsController extends Controller
             //deletar post banco
             $post->delete();
 
+            foreach($postIdioma as $key => $item){
+               $item->delete();
+            }
+
         }
 
         return $array;  
     }
     
-    public function update(Request $request, $id){
+    public function update(Request $request, $id, $lng){
         $array = ['error' => ''];
 
         $rules = [
-            'título' => 'required',
+            'título' => 'required|max:255',
             'descrição' => 'required',
-            'categoria' => 'required',
+            'categoria' => 'required|max:255',
             'dia' => 'required',
-            'título_da_página' => 'required',
-            'título_compartilhamento' => 'required',
+            'título_da_página' => 'required|max:60',
+            'título_compartilhamento' => 'required|max:60',
             'descrição_da_página' => 'required',
             'descrição_compartilhamento' => 'required',
         ];
@@ -271,46 +264,66 @@ class PostsController extends Controller
         $desPg = $request->input('descrição_da_página');
         $desCom = $request->input('descrição_compartilhamento');
         $post = Post::find($id);
+        $lngId = Idioma::select('id')->where('codigo', $lng)->first();
+        $postIdioma = PostIdioma::where('post_id', $id)->where('idioma_id', $lngId->id)->first();
 
-        if($title){
-            $post->title = $title;
-        }
-
-        if($description){
-            if($description === '<p><br></p>'){
-                $array['error'] = 'O campo descrição é obrigatório.';
-                return $array;
-
-            }else{
-                $post->description = $description;
-            }
+        if($day){
+            $post->publicado = $day;
+            $post->save();
         }
 
         if($category){
-            $post->category_id = $category;
+            $post->id_categoria = $category;
+            $post->save();
         }
 
-        if($day){
-            $post->publish = $day;
-        }
+        if($postIdioma){
+             
+            if($title){
+                $postIdioma->titulo = $title;
+            }
 
-         if($titlePg){
-            $post->titulo_pagina = $titlePg;
-        }
+            if($description){
+                if($description === '<p><br></p>'){
+                    $array['error'] = 'O campo descrição é obrigatório.';
+                    return $array;
 
-        if($titleCom){
-            $post->titulo_compartilhamento = $titleCom;
-        }
+                }else{
+                    $postIdioma->descricao = $description;
+                }
+            }
 
-        if($desPg){
-            $post->descricao_pagina = $desPg;
-        }
+            if($titlePg){
+                $postIdioma->titulo_pagina = $titlePg;
+            }
 
-        if($desCom){
-            $post->descricao_compartilhamento = $desCom;
+            if($titleCom){
+                $postIdioma->titulo_compartilhamento = $titleCom;
+            }
+
+            if($desPg){
+                $postIdioma->descricao_pagina = $desPg;
+            }
+
+            if($desCom){
+                $postIdioma->descricao_compartilhamento = $desCom;
+            }
+            
+            $postIdioma->save();
+
+        }else{
+            $newPostIdioma = new PostIdioma();
+            $newPostIdioma->titulo = $title;
+            $newPostIdioma->descricao = $description;
+            $newPostIdioma->titulo_compartilhamento = $titleCom;
+            $newPostIdioma->descricao_compartilhamento = $desCom;
+            $newPostIdioma->titulo_pagina = $titlePg;
+            $newPostIdioma->descricao_pagina = $desPg;
+            $newPostIdioma->post_id = $id;
+            $newPostIdioma->idioma_id = $lngId->id;
+            $newPostIdioma->criado = date('Y-m-d H:i:s');
+            $newPostIdioma->save();
         }
-        
-        $post->save();
 
         return $array;
 
@@ -328,11 +341,13 @@ class PostsController extends Controller
 
             $banner = $request->file('banner');
             $post = Post::find($id);
+            $extension = $request->file('banner')->extension();
+
 
             if($banner){
                 File::delete(public_path("/content/posts/banner/".$post->banner));
                 $dest = public_path('content/posts/banner');
-                $photoName = md5(time().rand(0,9999)).'.jpg';
+                $photoName = md5(time().rand(0,9999)).'.'.$extension;
         
                 $img = Image::make($banner->getRealPath());
                 $img->fit(550, 550)->save($dest.'/'.$photoName);
@@ -367,15 +382,21 @@ class PostsController extends Controller
         ];
     }
 
-    public function search(Request $request){
+    public function search(Request $request, $lng){
         $array = ['error' => ''];
-
+        $lngId = Idioma::select('id')->where('codigo', $lng)->first();
         $q = $request->input('q');
         
         if($q){
-            $posts = Post::where('title', 'LIKE', '%'.$q.'%')->get();
-            $array['itens']['data'] = $posts;
+            $posts = PostIdioma::where('titulo', 'LIKE', '%'.$q.'%')->where('idioma_id', $lngId->id)->get();
+           
+            foreach($posts as $key => $item){
+                $post = Post::find($item->post_id);
+                $posts[$key] = $post;
+                $posts[$key]['lng'] = $item;
+            }
 
+            $array['itens']['data'] = $posts;
         }else{
             $array['error'] = 'Digite algo para buscar!';
             return $array;

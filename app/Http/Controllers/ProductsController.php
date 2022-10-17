@@ -2,34 +2,37 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Product;
-use App\Models\CategorieProduct;
+use App\Models\Produto;
+use App\Models\Idioma;
+use App\Models\ProdutoIdioma;
+use App\Models\CategoriaProduto;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use App\Models\Imagem;
 use Intervention\Image\Facades\Image;
 use Illuminate\Support\Facades\File;
-
+use Illuminate\Support\Str;
 class ProductsController extends Controller
 {
     public function __construct()
     {
-        $this->middleware('auth:api', [ 'except' => [ 'index', 'privateIndex', 'findOne', 'findOnePrivate', 'search', 'privateOrderIndex' ] ] );
+        $this->middleware('auth:api', [ 'except' => [ 'index', 'privateIndex', 'findOne', 'create', 'findOnePrivate', 'search', 'privateOrderIndex' ] ] );
         
     }
 
-    public function index(Request $request){
+    public function index(Request $request, $lng){
         
         $array = ['error' => ''];
-        $products = Product::where('visivel', 1)->orderBy('posicao', 'asc')->orderBy('created_at', 'desc')->paginate(12);
-
+        $products = Produto::where('visivel', 1)->orderBy('posicao', 'asc')->orderBy('criado', 'desc')->paginate(12);
+        $lngId = Idioma::select('id')->where('codigo', $lng)->first();
+ 
         if($products){
-            
+            $array['produtos'] = $products;
             foreach($products as $key => $item){
-             //$products[$key]['imagens'] = $item->imagens;
-              $products[$key]['category'] = $item->category;
+                $products[$key]['category'] = $item->category;
+                $products[$key]['category']['lng'] = $item->category->idiomas()->where('idioma_id', $lngId->id)->first();
+                $products[$key]['lng'] = $item->idiomas()->where('idioma_id', $lngId->id)->first();
             }
-            $array['posts'] = $products;
             $array['path'] = url('content/products/capa');
         }else{
             $array['error'] = 'Nenhum produto foi encontrado';
@@ -39,18 +42,23 @@ class ProductsController extends Controller
         return $array; 
     }
 
-    public function privateIndex(Request $request){
+    public function privateIndex(Request $request, $lng){
         $id = $request->input('cat');
         $array = ['error' => ''];
+        $lngId = Idioma::select('id')->where('codigo', $lng)->first();
 
+        
         if (!$id){
-            $newId = CategorieProduct::select('id')->orderBy('posicao', 'asc')->first();
+            $newId = CategoriaProduto::select('id')->orderBy('posicao', 'asc')->first();
             $id = $newId->id;
         }
        
-        $products = CategorieProduct::find($id)->products()->orderBy('posicao', 'asc')->orderBy('created_at', 'desc')->paginate(3);
+        $products = CategoriaProduto::find($id)->products()->orderBy('posicao', 'asc')->orderBy('criado', 'desc')->paginate(3);
         if($products){
             $array['itens'] = $products;
+             foreach($products as $key => $item){
+                $products[$key]['lng'] = $item->idiomas()->where('idioma_id', $lngId->id)->first();
+            }
             $array['link'] = 'produtos';
             $array['name'] = 'Produtos';
             $array['path'] = url('content/products/capa');
@@ -61,18 +69,22 @@ class ProductsController extends Controller
         return $array;
     }
 
-    public function privateOrderIndex(Request $request, $id){
+    public function privateOrderIndex(Request $request, $id, $lng){
                     
         $array = ['error' => ''];
-        
+        $lngId = Idioma::select('id')->where('codigo', $lng)->first();
+
         if ($id === '0'){
-            $newId = CategorieProduct::select('id')->orderBy('posicao', 'asc')->first();
+            $newId = CategoriaProduto::select('id')->orderBy('posicao', 'asc')->first();
             $id = $newId->id;
         }
 
-        $products = CategorieProduct::find($id)->products()->orderBy('posicao', 'asc')->orderBy('created_at', 'desc')->get();
+        $products = CategoriaProduto::find($id)->products()->orderBy('posicao', 'asc')->orderBy('criado', 'desc')->get();
         if($products){
             $array['order'] = $products;
+            foreach($products as $key => $item){
+                $products[$key]['lng'] = $item->idiomas()->where('idioma_id', $lngId->id)->first();
+            }
             $array['link'] = 'produtos';
         }else{
             $array['error'] = 'Não foi encontrada!';
@@ -82,17 +94,20 @@ class ProductsController extends Controller
            
     }
 
-    public function findOne($id){
+    public function findOne($id, $lng){
         $array = ['error' => ''];
+        $product = Produto::where('visivel', 1)->find($id);
+        $lngId = Idioma::select('id')->where('codigo', $lng)->first();
 
-        $product = Product::where('visivel', 1)->find($id);
         if($product){
+            $array['product'] = $product;
+            $array['product']['lng'] = $product->idiomas()->where('idioma_id', $lngId->id)->first();
             $product['category'] = $product->category;
+            $product['category']['lng'] = $product->category->idiomas()->where('idioma_id', $lngId->id)->first();
             $product['imagens'] = $product->imagens;
             $array['pathImagens'] = url('content/products/imagens');
-            $array['pathBanner'] = url('content/product/banner');
-            $array['pathCapa'] = url('content/product/capa');
-            $array['product'] = $product;
+            $array['pathBanner'] = url('content/products/banner');
+            $array['pathCapa'] = url('content/products/capa');
             return $array;
         }else{
             $array['error'] = 'Nenhum produto foi encontrado';
@@ -100,17 +115,20 @@ class ProductsController extends Controller
         }
     }
 
-    public function findOnePrivate($id){
+    public function findOnePrivate($id, $lng){
         $array = ['error' => ''];
+        $lngId = Idioma::select('id')->where('codigo', $lng)->first();
+        $product = Produto::find($id);
 
-        $product = Product::find($id);
         if($product){
-            //$product['category'] = $product->category;
+            $array['product'] = $product;
+            $array['product']['lng'] = $product->idiomas()->where('idioma_id', $lngId->id)->first();
+            $product['category'] = $product->category;
+            $product['category']['lng'] = $product->category->idiomas()->where('idioma_id', $lngId->id)->first();
             $product['imagens'] = $product->imagens;
             $array['pathImagens'] = url('content/products/imagens');
             $array['pathBanner'] = url('content/products/banner/');
             $array['pathCapa'] = url('content/products/capa/');
-            $array['product'] = $product;
             return $array;
         }else{
             $array['error'] = 'Nenhum produto foi encontrado';
@@ -122,12 +140,13 @@ class ProductsController extends Controller
         $array = ['error' => ''];
 
         $validator = Validator::make($request->all(), [
-            'título' => 'required',
-            'título_da_página' => 'required',
-            'título_compartilhamento' => 'required',
+            'título' => 'required|max:255',
+            'título_da_página' => 'required|max:60',
+            'título_compartilhamento' => 'required|max:60',
             'descrição_da_página' => 'required',
             'descrição_compartilhamento' => 'required',
             'banner.*' => 'required|image|mimes:jpeg,png,jpg,svg',
+            'capa.*' => 'required|image|mimes:jpeg,png,jpg,svg',
             'categoria' => 'required',
             'descrição' => 'required',
             'imagens.*' =>  'required|image|mimes:jpeg,png,jpg,svg',
@@ -144,15 +163,17 @@ class ProductsController extends Controller
             $capa = $request->file('capa');
             $category = $request->input('categoria');
             $description = $request->input('descrição');
-          
             $images = $request->file('imagens.*');
+            $extensionBanner = $request->file('banner')->extension();
+            $extensionCapa = $request->file('capa')->extension();
+
 
            
                 $photoNameBanner = '';
                 //banner
                 if($banner){
                     $destBanner = public_path('content/products/banner');
-                    $photoNameBanner = md5(time().rand(0,9999)).'.jpg';
+                    $photoNameBanner = md5(time().rand(0,9999)).'.'.$extensionBanner;
                     $imgBanner = Image::make($banner->getRealPath());
                     $imgBanner->fit(1920, 810)->save($destBanner.'/'.$photoNameBanner);
                 }else{
@@ -165,7 +186,7 @@ class ProductsController extends Controller
                 //capa
                 if($capa){
                     $destCapa = public_path('content/products/capa');
-                    $photoNameCapa = md5(time().rand(0,9999)).'.jpg';
+                    $photoNameCapa = md5(time().rand(0,9999)).'.'.$extensionCapa;
                     $imgCapa = Image::make($capa->getRealPath());
                     $imgCapa->fit(550, 550)->save($destCapa.'/'.$photoNameCapa);
                 }else{
@@ -173,32 +194,41 @@ class ProductsController extends Controller
                     return $array;
                 }
 
-                $newProduct = new Product();
-                $newProduct->title = $title;
-                $newProduct->titulo_pagina = $titlePg;
-                $newProduct->titulo_compartilhamento = $titleCom;
-                $newProduct->descricao_pagina = $desPg;
-                $newProduct->descricao_compartilhamento = $desCom;
+                $newProduct = new Produto();
+                $newProductIdioma = new ProdutoIdioma();
+
+                $newProductIdioma->titulo = $title;
+                $newProductIdioma->descricao = $description;
+                $newProductIdioma->titulo_pagina = $titlePg;
+                $newProductIdioma->titulo_compartilhamento = $titleCom;
+                $newProductIdioma->descricao_pagina = $desPg;
+                $newProductIdioma->descricao_compartilhamento = $desCom;
+                $newProductIdioma->idioma_id = 1;
+                $newProductIdioma->criado = date('Y-m-d H:i:s');
+                $newProductIdioma->save();
+                
                 $newProduct->banner = $photoNameBanner;
                 $newProduct->capa = $photoNameCapa;
-                $newProduct->description = $description;
-                $newProduct->categorie_product_id = $category;
-                $newProduct->created_at = date('Y-m-d H:i:s');
+                $newProduct->id_categoria = $category;
+                $newProduct->criado = date('Y-m-d H:i:s');
                 $newProduct->posicao = 0;
-          
                 $newProduct->save();
 
+                $newProductIdioma->produto_id = $newProduct->id;
+                $newProductIdioma->save();
+
+                        
                 if($images){
                     foreach($images as $item){
-                        
+                        $$extension = $item->extension();
                         $dest = public_path('content/products/imagens');
-                        $photoName = md5(time().rand(0,9999)).'.jpg';
+                        $photoName = md5(time().rand(0,9999)).'.'.$extension;
                 
                         $img = Image::make($item->getRealPath());
                         $img->fit(550, 550)->save($dest.'/'.$photoName);
 
                         $newPostPhoto = new Imagem();
-                        $newPostPhoto->product_id = $newProduct->id;
+                        $newPostPhoto->produto_id = $newProduct->id;
                         $newPostPhoto->imagem = $photoName;
                         $newPostPhoto->save();
                     }
@@ -216,16 +246,22 @@ class ProductsController extends Controller
     public function delete($id){
         $array = ['error' => ''];
 
-        $product = Product::find($id);
+        $product = Produto::find($id);
+        $produtoIdioma = ProdutoIdioma::where('produto_id', $id)->get();
+
 
         if($id){
 
             //deletar images banco e pasta
             File::delete(public_path("/content/products/banner/".$product->banner));
             File::delete(public_path("/content/products/capa/".$product->capa));
-            $imgDel = Imagem::where('product_id', $product->id)->get();
+            $imgDel = Imagem::where('produto_id', $product->id)->get();
             foreach($imgDel as $item){
                 File::delete(public_path("/content/products/imagens/".$item["imagem"]));
+                $item->delete();
+            }
+
+            foreach($produtoIdioma as $key => $item){
                 $item->delete();
             }
 
@@ -263,21 +299,20 @@ class ProductsController extends Controller
         ]);
 
         if(!$validator->fails()){
-
             $images = $request->file('imagens.*');
-                $product = Product::find($id);
+                $product = Produto::find($id);
                 //images
                 if($images){
                     foreach($images as $item){
-                        
+                        $extension = $item->extension();
                         $dest = public_path('content/products/imagens');
-                        $photoName = md5(time().rand(0,9999)).'.jpg';
+                        $photoName = md5(time().rand(0,9999)).'.'.$extension;
                 
                         $img = Image::make($item->getRealPath());
                         $img->fit(550, 550)->save($dest.'/'.$photoName);
 
                         $newPostPhoto = new Imagem();
-                        $newPostPhoto->product_id = $product->id;
+                        $newPostPhoto->produto_id = $product->id;
                         $newPostPhoto->imagem = $photoName;
                         $newPostPhoto->save();
                     }
@@ -293,16 +328,16 @@ class ProductsController extends Controller
 
     }
 
-    public function update(Request $request, $id){
+    public function update(Request $request, $id, $lng){
 
         $array = ['error' => ''];
 
         $rules = [
-            'título' => 'required',
+            'título' => 'required|max:255',
             'descrição' => 'required',
             'categoria' => 'required',
-            'título_da_página' => 'required',
-            'título_compartilhamento' => 'required',
+            'título_da_página' => 'required|max:60',
+            'título_compartilhamento' => 'required|max:60',
             'descrição_da_página' => 'required',
             'descrição_compartilhamento' => 'required',
         ];
@@ -321,44 +356,61 @@ class ProductsController extends Controller
         $titleCom = $request->input('título_compartilhamento');
         $desPg = $request->input('descrição_da_página');
         $desCom = $request->input('descrição_compartilhamento');
-
-        $product = Product::find($id);
-
-        if($title){
-            $product->title = $title;
-        }
-
-        if($titlePg){
-            $product->titulo_pagina = $titlePg;
-        }
-
-        if($titleCom){
-            $product->titulo_compartilhamento = $titleCom;
-        }
-
-        if($desPg){
-            $product->descricao_pagina = $desPg;
-        }
-
-        if($desCom){
-            $product->descricao_compartilhamento = $desCom;
-        }
-
-       if($description){
-            if($description === '<p><br></p>'){
-                $array['error'] = 'O campo descrição é obrigatório.';
-                return $array;
-
-            }else{
-                $product->description = $description;
-            }
-        }
+        $product = Produto::find($id);
+        $lngId = Idioma::select('id')->where('codigo', $lng)->first();
+        $produtoIdioma = ProdutoIdioma::where('produto_id', $id)->where('idioma_id', $lngId->id)->first();
 
         if($category){
-            $product->categorie_product_id = $category;
+            $product->id_categoria = $category;
+            $product->save();
         }
 
-        $product->save();
+        if($produtoIdioma){
+             
+            if($title){
+                $produtoIdioma->titulo = $title;
+            }
+    
+            if($titlePg){
+                $produtoIdioma->titulo_pagina = $titlePg;
+            }
+    
+            if($titleCom){
+                $produtoIdioma->titulo_compartilhamento = $titleCom;
+            }
+    
+            if($desPg){
+                $produtoIdioma->descricao_pagina = $desPg;
+            }
+    
+            if($desCom){
+                $produtoIdioma->descricao_compartilhamento = $desCom;
+            }
+    
+           if($description){
+                if($description === '<p><br></p>'){
+                    $array['error'] = 'O campo descrição é obrigatório.';
+                    return $array;
+    
+                }else{
+                    $produtoIdioma->descricao = $description;
+                }
+            }
+            $produtoIdioma->save();
+
+        }else{
+            $newProductIdioma = new ProdutoIdioma();
+            $newProductIdioma->titulo = $title;
+            $newProductIdioma->descricao = $description;
+            $newProductIdioma->titulo_compartilhamento = $titleCom;
+            $newProductIdioma->descricao_compartilhamento = $desCom;
+            $newProductIdioma->titulo_pagina = $titlePg;
+            $newProductIdioma->descricao_pagina = $desPg;
+            $newProductIdioma->produto_id = $id;
+            $newProductIdioma->idioma_id = $lngId->id;
+            $newProductIdioma->criado = date('Y-m-d H:i:s');
+            $newProductIdioma->save();
+        }
        
         return $array;
 
@@ -375,12 +427,14 @@ class ProductsController extends Controller
         if(!$validator->fails()){
 
             $banner = $request->file('banner');
-            $product = Product::find($id);
+            $product = Produto::find($id);
+            $extension = $request->file('banner')->extension();
+
 
             if($banner){
                 File::delete(public_path("/content/products/banner/".$product->banner));
                 $dest = public_path('content/products/banner');
-                $photoName = md5(time().rand(0,9999)).'.jpg';
+                $photoName = md5(time().rand(0,9999)).'.'.$extension;
         
                 $img = Image::make($banner->getRealPath());
                 $img->fit(1920, 810)->save($dest.'/'.$photoName);
@@ -412,12 +466,14 @@ class ProductsController extends Controller
         if(!$validator->fails()){
 
             $capa = $request->file('capa');
-            $product = Product::find($id);
+            $product = Produto::find($id);
+            $extension = $request->file('capa')->extension();
+
 
             if($capa){
                 File::delete(public_path("/content/products/capa/".$product->capa));
                 $dest = public_path('content/products/capa');
-                $photoName = md5(time().rand(0,9999)).'.jpg';
+                $photoName = md5(time().rand(0,9999)).'.'.$extension;
         
                 $img = Image::make($capa->getRealPath());
                 $img->fit(550, 550)->save($dest.'/'.$photoName);
@@ -438,15 +494,19 @@ class ProductsController extends Controller
     }
 
 
-    public function search(Request $request){
+    public function search(Request $request, $lng){
         $array = ['error' => ''];
-
+        $lngId = Idioma::select('id')->where('codigo', $lng)->first();
         $q = $request->input('q');
         
         if($q){
-            $products = Product::where('title', 'LIKE', '%'.$q.'%')->get();
+            $products = ProdutoIdioma::where('titulo', 'LIKE', '%'.$q.'%')->where('idioma_id', $lngId->id)->get();
+            foreach($products as $key => $item){
+                $product = Produto::find($item->produto_id);
+                $products[$key] = $product;
+                $products[$key]['lng'] = $item;
+            }
             $array['itens']['data'] = $products;
-
 
         }else{
             $array['error'] = 'Digite algo para buscar!';
@@ -461,7 +521,7 @@ class ProductsController extends Controller
         $array = ['error' => ''];
         $visivel = $request->input('check');
 
-        $product = Product::find($id);
+        $product = Produto::find($id);
 
         if($product){
             if($visivel === true){
@@ -486,7 +546,7 @@ class ProductsController extends Controller
         
         if($data){
             foreach($data as $key => $item){
-                $cat = Product::find($item['id']);
+                $cat = Produto::find($item['id']);
                 $cat->posicao = $item['posicao'];
                 $cat->save();
             }

@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Category;
+use App\Models\CategoriaPost;
+use App\Models\CategoriaPostIdioma;
+use App\Models\Idioma;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 
@@ -11,24 +13,20 @@ class CategoriesController extends Controller
 
     public function __construct()
     {
-        $this->middleware('auth:api', [ 'except' => [ 'index', 'privateIndex', 'create', 'findOneEdit', 'findOnePrivate', 'findAll', 'order' ] ] );  
+        $this->middleware('auth:api', [ 'except' => [ 'index', 'privateIndex', 'create', 'showCategory', 'findOneEdit', 'findOnePrivate', 'findAll', 'order', 'findOne' ] ] );  
     }
 
-    public function privateIndex(Request $request){
-        $array = ['error' => ''];
-        $categories = Category::orderBy('posicao', 'asc')->orderBy('created_at', 'desc')->get(); 
-        $array['categories'] = $categories;
-        $array['link'] = 'categorias';
-        
-        return $array;
-    }
-
-    public function index(Request $request){
+    public function index(Request $request, $lng){
        
         $array = ['error' => ''];
-        $categories = Category::where('visivel', 1)->orderBy('posicao', 'asc')->orderBy('created_at', 'desc')->get();
+
+        $lngId = Idioma::select('id')->where('codigo', $lng)->first();
+        $categories = CategoriaPost::where('visivel', 1)->orderBy('posicao', 'asc')->orderBy('criado', 'desc')->get();
 
         if($categories){
+            foreach($categories as $key => $item){
+               $categories[$key]['lng'] = $item->idiomas()->where('idioma_id', $lngId->id)->first();
+            }
             $array['categories'] = $categories;
         }else{
             $array['error'] = 'Nenhuma categoria foi encontrada';
@@ -36,26 +34,80 @@ class CategoriesController extends Controller
         }
         
         return $array;
-    } 
+    }
+    
+    public function privateIndex(Request $request, $lng){
 
-    public function findOneEdit($id){
         $array = ['error' => ''];
-        $category = Category::find($id);
+        $categories = CategoriaPost::orderBy('posicao', 'asc')->orderBy('criado', 'desc')->get(); 
+
+        $lngId = Idioma::select('id')->where('codigo', $lng)->first();
+
+        if($categories){
+            foreach($categories as $key => $item){
+               $categories[$key]['lng'] = $item->idiomas()->where('idioma_id', $lngId->id)->first();
+            }
+            $array['link'] = 'categorias';
+            $array['categories'] = $categories;
+        }else{
+            $array['error'] = 'Nenhum produto foi encontrado';
+            return $array;
+        }
+        
+        return $array; 
+    }
+
+    public function findOneEdit($id, $lng){
+        $array = ['error' => ''];
+        $lngId = Idioma::select('id')->where('codigo', $lng)->first();
+        $category = CategoriaPost::find($id);
+        
         if($category){
             $array['category'] = $category;
+            $array['category']['lng'] = $category->idiomas()->where('idioma_id', $lngId->id)->where('id_categoria', $id)->first();
+            
         }else{
-            $array['error'] = 'Não foi encontrada!';
+            $array['error'] = 'Não foi encontrada nenhuma categoria!';
             return $array;
         }
         return $array;
     }
     
+    //categoria unica com seus posts
 
-    public function findOnePrivate($id){
+    public function findOnePrivate($id, $lng){
         $array = ['error' => ''];
-        $category = Category::find($id)->posts()->orderBy('posicao', 'asc')->orderBy('created_at', 'desc')->paginate(3);
+        $lngId = Idioma::select('id')->where('codigo', $lng)->first();
+        
+        $category = CategoriaPost::find($id)->posts()->orderBy('posicao', 'asc')->orderBy('criado', 'desc')->paginate(12);
+       
         if($category){
             $array['itens'] = $category;
+
+             foreach($category as $key => $item){
+                $category[$key]['lng'] = $item->idiomas()->where('idioma_id', $lngId->id)->first();
+            }
+
+            $array['path'] = url('content/banner/');
+        }else{
+            $array['error'] = 'Não foi encontrada nenhuma categoria!';
+            return $array;
+        }
+        return $array;
+    }
+
+    //categoria unica com seus posts index
+
+    public function findOne($id, $lng){
+       $array = ['error' => ''];
+        $lngId = Idioma::select('id')->where('codigo', $lng)->first();
+        $category = CategoriaPost::find($id)->posts()->where('visivel', 1)->orderBy('posicao', 'asc')->orderBy('criado', 'desc')->paginate(3);
+
+        if($category){
+            $array['itens'] = $category;
+            foreach($category as $key => $item){
+                $category[$key]['lng'] = $item->idiomas()->where('idioma_id', $lngId->id)->first();
+            }
             $array['path'] = url('content/banner/');
         }else{
             $array['error'] = 'Não foi encontrada!';
@@ -64,26 +116,20 @@ class CategoriesController extends Controller
         return $array;
     }
 
-    public function findOne($id){
+    public function findAll(Request $request, $lng){
         $array = ['error' => ''];
-        $category = Category::find($id)->where('visivel', 1)->posts()->orderBy('posicao', 'asc')->orderBy('created_at', 'desc')->paginate(3);
-        if($category){
-            
-            $array['itens'] = $category;
-            $array['path'] = url('content/banner/');
-        }else{
-            $array['error'] = 'Não foi encontrada!';
-            return $array;
-        }
-        return $array;
-    }
+        $lngId = Idioma::select('id')->where('codigo', $lng)->first();
 
-    public function findAll(Request $request){
-        $array = ['error' => ''];
-        $categories= Category::where('visivel', 1)->with('posts')->get();
+        $categories = CategoriaPost::where('visivel', 1)->get();
 
         if($categories){
+
             $array['categories'] = $categories;
+            foreach($categories as $key => $item){
+                $categories[$key]['categoria_lng'] = $item->idiomas()->where('idioma_id', $lngId->id)->first();
+                $categories[$key]['posts'] = $item->posts()->has('idiomas')->with(["idiomas" => function($q) use ($lngId) { $q->where('idioma_id', $lngId->id);}])->get();
+            }
+
         }else{
             $array['error'] = 'Nenhuma categoria foi encontrada';
             return $array;
@@ -91,26 +137,34 @@ class CategoriesController extends Controller
         
         return $array;
     }
+
     public function create(Request $request){
         $array = ['error' => ''];
 
         $validator = Validator::make($request->all(), [
-            'título' => 'required',
+            'título' => 'required|max:128',
         ]);
 
         $name = $request->input('título');
 
         if(!$validator->fails()){
-            $catExists = Category::where('name', $name)->count();
+            $catExists = CategoriaPostIdioma::where('titulo', $name)->count();
 
             if($catExists === 0){
-                
-                $newCat = new Category();
-                $newCat->name = $name;
-                $newCat->created_at = date('Y-m-d H:i:s');
+                $newCat = new CategoriaPost();
+                $newCat->criado = date('Y-m-d H:i:s');
                 $newCat->posicao = 0;
                 $newCat->save();
+
+                $newCatIdioma = new CategoriaPostIdioma();
+                $newCatIdioma->titulo = $name;
+                $newCatIdioma->id_categoria = $newCat->id;
+                $newCatIdioma->idioma_id = 1;
+                $newCatIdioma->criado = date('Y-m-d H:i:s');
+                $newCatIdioma->save();
+                
                 $array['success'] = 'Categoria criada com sucesso!';
+
 
             }else{
                 $array['error'] = 'Essa categoria já existe!';
@@ -128,20 +182,27 @@ class CategoriesController extends Controller
     public function delete($id){
         $array = ['error' => ''];
 
-        $category = Category::find($id);
+        $categoria = CategoriaPost::find($id);
+        $categoriaIdioma = CategoriaPostIdioma::where('id_categoria', $id)->get();
+
 
         if($id){
-            $category->delete();
+            $categoria->delete();
+
+            foreach($categoriaIdioma as $key => $item){
+               $item->delete();
+            }
+
         }
 
         return $array;  
     }
 
-    public function update(Request $request, $id){
+    public function update(Request $request, $id, $lng){
         $array = ['error' => ''];
 
         $rules = [
-            'título' => 'required',
+            'título' => 'required|max:128',
         ];
 
         $validator = Validator::make($request->all(), $rules);
@@ -151,14 +212,25 @@ class CategoriesController extends Controller
             return $array;
         } 
 
-        $name = $request->input('título');
-        $category = Category::find($id);
+        $lngId = Idioma::select('id')->where('codigo', $lng)->first();
 
-        if($name){
-            $category->name = $name;
+        $name = $request->input('título');
+        $category = CategoriaPostIdioma::where('id_categoria', $id)->where('idioma_id', $lngId->id)->first();
+
+        if($category){
+            if($name){
+                $category->titulo = $name;
+                $category->save();
+            }
+        }else{
+            $newCatIdioma = new CategoriaPostIdioma();
+            $newCatIdioma->titulo = $name;
+            $newCatIdioma->id_categoria = $id;
+            $newCatIdioma->idioma_id = $lngId->id;
+            $newCatIdioma->criado = date('Y-m-d H:i:s');
+            $newCatIdioma->save();
         }
    
-        $category->save();
         return $array;
     }
 
@@ -166,7 +238,7 @@ class CategoriesController extends Controller
         $array = ['error' => ''];
         $visivel = $request->input('check');
 
-        $category = Category::find($id);
+        $category = CategoriaPost::find($id);
 
         if($category){
             if($visivel === true){
@@ -184,6 +256,7 @@ class CategoriesController extends Controller
 
     }
 
+
     public function order(Request $request){
         $array = ['error' => ''];
         $itens = $request->input('itens');
@@ -191,7 +264,7 @@ class CategoriesController extends Controller
         
         if($data){
             foreach($data as $key => $item){
-                $cat = Category::find($item['id']);
+                $cat = CategoriaPost::find($item['id']);
                 $cat->posicao = $item['posicao'];
                 $cat->save();
             }

@@ -12,13 +12,13 @@ class Imagem extends Model
 
     protected $fillable = [
         'imagem',
-        'product_id',
+        'produto_id',
     ];
 
     public $timestamps = false;
 
     
     public function Product(){
-        return $this->belongsTo(Product::class, 'id', 'product_id');
+        return $this->belongsTo(Produto::class, 'id', 'produto_id');
     }
 }

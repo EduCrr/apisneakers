@@ -11,38 +11,42 @@ class Post extends Model
     use HasFactory;
 
     protected $fillable = [
-        'title',
         'banner',
-        'description',
-        'category',
-        'images'
+        'visivel',
+        'slug',
+        'criado',
+        'publicado',
+        'id_categoria',
     ];
     public $keyType = 'string';
-    protected $hidden = [
-        'category_id'
-    ];
 
     public $timestamps = false;
 
 
-    public function category(){
-        return $this->hasOne(Category::class, 'id', 'category_id');
-        //id de category é referente ao category_id em post
+   public function category(){
+        return $this->belongsTo(CategoriaPost::class,  'id_categoria', 'id');
     }
 
     public static function boot(){
         parent::boot();
 
+       
         static::creating(function($activity) {
-            
-            $slug = \Str::slug($activity->title);
+            $createSlug = PostIdioma::select()->orderBy('criado', 'desc')->first();
 
+            $slug = \Str::slug($createSlug->titulo);
+            
             $count = static::whereRaw("slug RLIKE '^{$slug}(-[0-9]+)?$'")->count();
-          
+
             $activity->slug = $count ? "{$slug}-{$count}" : $slug;
 
         });
 
+    }
+
+     public function idiomas(){
+        return $this->hasMany(PostIdioma::class, 'post_id', 'id');
+        //'foreign_key', 'local_key'
     }
     
 }
